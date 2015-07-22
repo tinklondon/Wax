@@ -1,0 +1,269 @@
+<script>
+
+(function() {
+
+  var WX = window.WX = {}
+  
+  WX.create = function( base ) {
+    var derived = new Function();
+    
+    for( var prop in base ) {
+      if( base.hasOwnProperty( prop ) ) {
+        derived[ prop ] = base[ prop ];
+      }
+    }
+    function __() {
+      this.constructor = derived;
+    }
+    __.prototype = base.prototype;
+    derived.prototype = new __();
+    return derived;
+  }
+  
+  WX.extend = function( ctor, name ) {
+    var definition = _definitions.get( ctor );
+    var o = Object.create( null );
+    var derived = WX.create( ctor );
+    
+    o._config = WX.create( {} ).prototype;
+    o._protected = WX.create( {} ).prototype;
+    o._public = derived.prototype;
+    o._super = WX.create( ctor ).prototype;
+    
+    if( definition ) {
+      // Put the protected properties/methods on protected.
+      WX.merge( definition._protected, o._protected );
+    
+      // Put the super properties/methods on protected.
+      WX.merge( definition._protected, o._super );
+    }
+    
+    
+    if( name ) {
+      addToPackage( name, derived, o );
+    }
+    
+    return o;
+  }
+  
+  WX.merge = function( base, decorated ) {
+    for( var prop in base ) {
+      var v = base[ prop ];
+      if( typeof v == "function" ) {
+        decorated[ prop ] =  v;
+      } else {
+        var pd = Object.getOwnPropertyDescriptor( base, prop );
+        var proto = Object.getPrototypeOf( base );
+        while( pd === undefined && proto !== null ) {
+          pd = Object.getOwnPropertyDescriptor( proto, prop );
+          proto = Object.getPrototypeOf( proto );
+        }
+        if( pd ) {
+          if( pd.get && pd.set ) {
+            Object.defineProperty( decorated, prop, {
+              get: function() {
+                return pd.get.call( this );
+              },
+              set: function( value ) {
+                pd.set.call( this, value );
+              },
+              enumerable: pd.enumerable,
+              configurable: pd.configurable
+            });
+          } else if( pd.get ) {
+            Object.defineProperty( decorated, prop, {
+              get: function() {
+                return pd.get.call( this );
+              },
+              enumerable: pd.enumerable,
+              configurable: pd.configurable
+            });
+          } else if( ps.set ) {
+            Object.defineProperty( decorated, prop, {
+              set: function( value ) {
+                pd.set.call( this, value );
+              },
+              enumerable: pd.enumerable,
+              configurable: pd.configurable
+            });
+          }
+        }
+      }
+    }
+  }
+  
+  WX.registerElement = function( definition, name ) {
+    var n = name.split( "." );
+    var tagName = getTagName( name );
+    var ctor = document.registerElement( tagName, { prototype: definition._public } );
+    addToPackage( name, ctor, definition );
+  }
+  
+  
+  //--------------------------------------------------------------------------
+  //
+  //  Variables
+  //
+  //--------------------------------------------------------------------------
+  
+  var _definitions = new Map();
+  
+  var _qualifiedNames = new Map();
+  
+
+  var def = WX.extend( HTMLElement );
+  
+  //--------------------------------------------------------------------------
+  //
+  //  Methods
+  //
+  //--------------------------------------------------------------------------
+  
+  function getProtected( target ) {
+    var definition = _definitions.get( target.constructor );
+    return definition ? definition._protected : null;
+  }
+  
+  function getQualifiedName( target ) {
+    return _qualifiedNames.get( target.constructor );
+  }
+  
+  function getNameSpace( name ) {
+    var pkg = name.split( "." );
+    
+    // Create the package, if it hasn't been created.
+    var p = window;
+    // Ignore the last index, which will be the element name.
+    var numItems = pkg.length - 1;
+    for( var i = 0; i < numItems; i++ ) {
+      var o = p[ pkg[ i ] ];
+      if( !o ) {
+        o = p[ pkg[ i ] ] = {};
+      }
+      p = o; 
+    }
+    return p;
+  }
+  
+  function camelToSkeleton( match, index, orig ) {
+    match = match.toLowerCase();
+    var l = match.length;
+    if( length > 1 ) {
+      match = match.substr( 0, l - 1 ) + "-" + match.substr( l - 1 );
+    }
+    if( index != 0 ) {
+      match = "-" + match;
+    }
+    return match;
+  }
+  
+  function getTagName( name ) {
+    if( name && name.length ) {
+      var i = name.lastIndexOf( "." );
+      var cls = name.substr( i + 1 );
+      return cls.replace( /[A-Z]+/g, camelToSkeleton );
+    } else {
+      throw "No name specified.";
+    }
+  }
+  
+  function addToPackage( name, ctor, definition ) {
+    var namespace = getNameSpace( name );
+    //TODO use last indexOf??
+    var i = name.lastIndexOf( "." );
+    var cls = name.substr( i + 1 );
+    if( namespace[ cls ] ) {
+      throw "The class '" + cls + "' has already been registered.";
+    } else {
+      namespace[ cls ]  = ctor;
+      _definitions.set( ctor, definition )
+      _qualifiedNames.set( ctor, name );
+    }
+  }
+  
+  function getInject( target ) {
+    var d = _definitions.get( target.constructor );
+    return d ? d._injector : null;
+  }
+  
+  
+  def._public.createdCallback = function() {
+    console.log( "createdCallback WxElement Blah" );
+    var protected = getProtected( this );
+    protected.initProtected.call( this, protected );
+    
+    var p = Object.getPrototypeOf( this );
+    while( p.constructor != wx.core.WxElement ) {
+      // If this is a context, give it access to the inject info.
+      if( p.constructor == wx.core.WxContext ) {
+        protected.initContext.call( this, getInject, getNameSpace, getQualifiedName );
+        break;
+      }
+      p = Object.getPrototypeOf( p );
+    }
+    
+    this.dispatchEvent( new Event( "elementCreated", { bubbles: true, cancelable: false } ) );
+  }
+  
+  def._public.invalidateProperties = function() {
+    getProtected( this ).commitProperties.call( this );
+  }
+  
+  def._protected.initProtected = function( value ) {
+  
+  }
+  
+  def._protected.commitProperties = function() {
+  
+  }
+  
+  // var XFooProto = Object.create(HTMLElement.prototype);
+  // XFooProto.createdCallback = function() {
+  //   console.log( "createdCallback WxElement" );
+  // }
+  WX.registerElement( def, "wx.core.WxElement")
+  
+})();
+  
+</script>
+<!--<script>
+  
+  (function() {
+    
+    window.MS = {};
+    
+    var _publics = new WeakMap();
+    var _protecteds = new WeakMap();
+    var _supers = new WeakMap();
+    var _defs = new WeakMap();
+    var _qualifiedNames = new WeakMap();
+    
+    function getProtected( target ) {
+      return _protecteds.get( target.constructor );
+    }
+    
+    function getQualifiedName( target ) {
+      return _qualifiedNames.get( target.constructor );
+    }
+    
+    function getPackage( name ) {
+      var n = name.split( "." );
+      
+      var numItems = n.length - 1;
+      var p = window;
+      for( var i = 0; i < numItems; i++ ) {
+        var np = p[ n[ i ] ];
+        if( !np ) {
+          np = p[ n[ i ] ] = {};
+        }
+        
+        p = np;
+      }
+      return p;
+    }
+    
+    
+    
+    
+  })()
+</script>-->

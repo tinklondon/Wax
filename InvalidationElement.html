@@ -1,0 +1,178 @@
+<link rel="import" href="WxElement.html">
+
+<script>
+
+(function() {
+
+  
+  //--------------------------------------------------------------------------
+  //
+  //  Variables
+  //
+  //--------------------------------------------------------------------------
+  
+  /**
+   * @private
+   */
+  var def = WX.extend( wx.core.WxElement, null );
+  
+  /**
+   * @private
+   */
+  var _super = def._super;
+  
+  /**
+   * @private
+   */
+  var _protected = new WeakMap();
+  
+  /**
+   * @private
+   */
+  var _propertiesInvalid = new WeakMap();
+    
+  /**
+   * @private
+   */
+  var _viewInvalid = new WeakMap();
+    
+  /**
+   * @private
+   */
+  var _sizeInvalid = new WeakMap();
+
+  
+  //--------------------------------------------------------------------------
+  //
+  //  Properties
+  //
+  //--------------------------------------------------------------------------
+  
+  //----------------------------------
+  //  nestLevel
+  //----------------------------------
+  
+  /**
+   * @private
+   */
+  var _nestLevel = new WeakMap();
+    
+  Object.defineProperty( def._public, "nestLevel", {
+    get: function() {
+      var value = _nestLevel.get( this );
+      return 1;//value || 0;
+    },
+    set: function(value) { 
+      _nestLevel.set( this, value );
+      this.invalidateView();
+      this.invalidateSize();
+      this.invalidateProperties();
+    }
+  });
+ 
+  
+  
+  //--------------------------------------------------------------------------
+  //
+  //  Methods
+  //
+  //--------------------------------------------------------------------------
+  
+  
+  def._protected.initProtected = function( value ) {
+    _protected.set( this, value );
+    _super.initProtected.call( this, value );
+  }
+  
+  //--------------------------------------------------------------------------
+  //
+  //  Overridden lifecycle methods
+  //
+  //--------------------------------------------------------------------------
+  
+  def._public.createdCallback = function() {
+    console.log( "createdCallback Invalidation" );
+    _super.createdCallback.call( this );
+    this.invalidateProperties();
+    
+  }
+  
+  
+  def._public.invalidateProperties = function() {
+    if( !_propertiesInvalid.get( this ) ) {
+      if( WX.invalidate ) {
+        _propertiesInvalid.set( this, true );
+        wx.core.InvalidationManager.getInstance().invalidateProperties( this );
+      } else {
+        _protected.get( this ).commitProperties.call( this );
+      }
+      
+    }
+  }
+  
+  def._public.invalidateSize = function() {
+    if( !_sizeInvalid.get( this ) ) {
+      if( WX.invalidate ) {
+        _sizeInvalid.set( this, true );
+        var parent = _parent.get( this );
+        if( parent ) parent.invalidateView();
+        wx.core.InvalidationManager.getInstance().invalidateView( this );
+      } else {
+        _protected.get( this ).commitSize.call( this );
+      }
+    } 
+  }
+  
+  def._public.invalidateView = function() {
+    if( !_viewInvalid.get( this ) ) {
+      if( WX.invalidate ) {
+        _viewInvalid.set( this, true );
+        var parent = _parent.get( this );
+        if( parent ) parent.invalidateView();
+        wx.core.InvalidationManager.getInstance().invalidateView( this );
+      } else {
+        _protected.get( this ).commitView.call( this );
+      }
+    } 
+  }
+  
+  
+  def._protected.commitProperties = function() {
+    console.log( "commitProperties" );
+  }
+  
+  def._protected.commitSize = function() {
+    console.log( "commitSize" );
+  }
+  
+  def._protected.commitView = function() {
+    console.log( "commitView" );
+  }
+  
+  def._public.validateProperties = function() {
+    if( _propertiesInvalid.get( this ) ) {
+      _protected.get( this ).commitProperties();
+      _propertiesInvalid.set( this, false );
+    }
+  }
+  
+  def._public.validateSize = function() {
+    if( _sizeInvalid.get( this ) ) {
+      _protected.get( this ).commitSize();
+      _sizeInvalid.set( this, false );
+    }
+  }
+  
+  def._public.validateView = function() {
+    if( _viewInvalid.get( this ) ) {
+      _protected.get( this ).commitView();
+      _viewInvalid.set( this, false );
+    }
+  }
+  
+  WX.registerElement( def, "wx.core.InvalidationElement" );
+  
+  
+})();
+  
+</script>

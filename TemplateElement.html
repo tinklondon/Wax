@@ -1,0 +1,159 @@
+<link rel="import" href="InvalidationElement.html">
+
+<template>
+  <button id="testid">Yeah</button>
+</template>
+<script>
+
+(function() {
+
+  
+  //--------------------------------------------------------------------------
+  //
+  //  Variables
+  //
+  //--------------------------------------------------------------------------
+  
+  var def = WX.extend( wx.core.InvalidationElement, null );
+  
+  var _super = def._super;
+  var _protected = new WeakMap();
+  
+  var _parts = new WeakMap();
+  
+  var _shadowDom = new WeakMap();
+  
+  
+  var ownerDocument = document.currentScript.ownerDocument;
+
+  
+  //--------------------------------------------------------------------------
+  //
+  //  Properties
+  //
+  //--------------------------------------------------------------------------
+  
+  var _template = new WeakMap();
+  
+  var _templateInvalid = new WeakMap();
+  
+  Object.defineProperty( def._public, 'template', {
+    get: function() {
+      return _template.get( this );
+    },
+    set: function( value ) {
+      if( this.template == value )
+        return;
+        
+      _template.set( this, value );
+      _templateInvalid.set( this, true );
+      def._public.invalidateProperties.call( this );
+    }
+  });
+ 
+  
+  
+  //--------------------------------------------------------------------------
+  //
+  //  Methods
+  //
+  //--------------------------------------------------------------------------
+  
+  def._protected.getParts = function() { 
+      return [
+        { id: "testid", required: true }
+      ]
+  }
+  
+  def._protected.addPart = function( element, id ) {
+      console.log( "adding part", id )
+  }
+  
+  def._protected.removePart = function( element, name ) {
+      
+  }
+  
+  def._protected.initProtected = function( value ) {
+    _protected.set( this, value );
+    _super.initProtected.call( this, value );
+  }
+  
+  function updateParts( shadowDom, updateMethod, adding ) {
+    
+    var parts = _parts.get( this );
+    
+    if( parts ) {
+      var numParts = parts.length;
+      for ( var i = 0; i < numParts; i++ ) {
+        var p = parts[ i ];
+        var elId = p.id;
+        var el = shadowDom.getElementById( elId );
+        if( el ) {
+          updateMethod( el, elId );
+        } else if( adding && p.required ) {
+          throw "The required template part '" + elId + "' cannot be found.";
+        }
+      }
+    }
+  }
+  
+  function installTemplate() {
+    
+    var sd = _shadowDom.get( this );
+    if( !sd ) {
+      sd = this.createShadowRoot();
+      _shadowDom.set( this, sd );
+    }
+    
+    updateParts.call( this, sd, _protected.get( this ).removePart, false );
+    
+    // Remove all the children from the shadow dom.
+    while( sd.firstChild ) {
+      sd.removeChild( sd.firstChild );
+    }
+    
+    var clone = document.importNode( this.template.content, true );  
+    sd.appendChild( clone );
+    
+    updateParts.call( this, sd, _protected.get( this ).addPart, true );
+    
+    console.log( "installTemplate");
+  }
+  
+  
+  
+  
+  //--------------------------------------------------------------------------
+  //
+  //  Overridden lifecycle methods
+  //
+  //--------------------------------------------------------------------------
+  
+  def._public.createdCallback = function() {
+    console.log( "createdCallback Template" );
+    _super.createdCallback.call( this );
+    
+    var parts = _protected.get( this ).getParts.call( this );
+    _parts.set( this, parts )
+    
+    var t = ownerDocument.getElementsByTagName( "template" )[ 0 ];
+    this.template = t;
+    
+  }
+  
+  
+  def._protected.commitProperties = function() {
+    _super.commitProperties.call( this );
+    
+    if( _templateInvalid.get( this ) ) {
+      _templateInvalid.delete( this );
+      installTemplate.call( this );
+    }
+  }
+  
+  WX.registerElement( def, "wx.core.TemplateElement");
+  
+  
+})();
+  
+</script>

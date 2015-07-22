@@ -1,0 +1,270 @@
+<link rel="import" href="WxElement.html">
+
+<script>
+(function() {
+
+  
+  //--------------------------------------------------------------------------
+  //
+  //  Variables
+  //
+  //--------------------------------------------------------------------------
+  
+  var def = WX.extend( wx.core.WxElement, null );
+  
+  var _super = def._super;
+  var _protected = new WeakMap();
+  
+  var _parent = new WeakMap();
+  
+  var _childListeners = new WeakMap();
+  
+  var _dependents = new WeakMap();
+  var _childContexts = new WeakMap();
+  
+  var getInjector, getNamespace, getQualifiedName;
+  
+  //--------------------------------------------------------------------------
+  //
+  //  Methods
+  //
+  //--------------------------------------------------------------------------
+  
+  def._protected.initContext = function( getInjectorFunc, getNamespaceFunc, getQualifiedNameFunc ) {
+    getInjector = getInjectorFunc;
+    getNamespace = getNamespaceFunc;
+    getQualifiedName = getQualifiedNameFunc;
+  }
+  
+  function getObjectyKey( key ) {
+    
+    var store = _store.get( this );
+    
+    // Get the item from the store.
+    var o = store.get( key );
+      
+    // If there is no item, request it from the parent context.
+    if( !o )
+      o = _parent.get( this ).getItemByKey.call( this, key );
+      
+    // // If there haven't been any items registered with the key.
+    // if( !o ) {
+    //   throw "Invalid dependency, there are no items that match."
+    // // If there have been multiple items registered with the key.
+    // } else if( o == "invalid" ) {
+    //   throw "Invalid dependency, there are multiple items that match."
+    // }
+    
+    return o;
+  }
+  
+  function injectDependent( dependent ) {
+    var inject = getInjector( dependent );
+    if( inject && inject.required && inject.required.length ) {
+      var key = createKeyFromRequirement( requirment )
+      var error;
+      var numItems = inject.required.length;
+      var toInject = [];
+      for( var i = 0; i < numItems; i++ ) {
+        var key = createKeyFromRequirement.call( this, inject.required[ 0 ] );
+        var item = this.getObbjectByKey( key );
+        if( !item ) {
+          item = "Invalid dependency, there are no items that match."
+          error = true;
+        } else if( item == "invalid" ) {
+          item = "Invalid dependency, there are multiple items that match."
+          error = true;
+        } else {
+           error = false;
+        }
+        
+        if( error )
+          throw item;
+        toInject.push( item );
+      }
+      
+      inject.initialize.call( this, toInject );
+    }
+    
+  }
+  
+  function addToStore( store, key, item ) {
+    if( store.get( key ) ) {
+      store.set( key, "invalid" );
+    } else {
+      store.set( key, item );
+    }
+  }
+  
+  function createKey( type, id, name ) {
+    var key = [];
+    
+    if( type && type.length )
+      key.push( "type:" + type );
+    
+    if( id && id.length )
+      key.push( "id:" + id );
+      
+    if( name && name.length )
+      key.push( "name:" + name );
+      
+    return key.join( "," );
+  }
+  
+  function createKeyFromRequirement( requirement ) {
+    if( typeof requirement === "string" ) {
+      return requirement;
+    } else {
+      return createKey( requirement.type, requirement.id, requirement.name );
+    }
+  }
+  
+  function setParentCallback( parent ) {
+    _parent.set( this, parent );
+    
+    var items, numItems, i;
+     
+    items = _childContexts.get( this );
+    _childContexts.delete( this );
+    if( items ) {
+      numItems = items.length;
+      for( i = 0; i < numItems; i++ ) {
+        items[ i ]( this )
+      }
+    }
+    
+    items = _dependents.get( this );
+    _dependents.delete( this );
+    if( items ) {
+      numItems = items.length;
+      for( i = 0; i < numItems; i++ ) {
+        injectDependent( items[ i ] );
+      }
+    }
+   
+  }
+  //--------------------------------------------------------------------------
+  //
+  //  Overridden lifecycle methods
+  //
+  //--------------------------------------------------------------------------
+  
+  def._public.createdCallback = function() {
+   
+    // Add a 'elementCreated' listener to the parent to catch element being created.
+    // parentNode.addEventListener( "elementCreated", elementCreated.bind( this ) );
+    
+    // Add a listener for child contexts being created.
+    // parentNode.addEventListener( "contextCreated", contextCreated.bind( this ) );
+    
+    // Dispatch an event to hope it will be caught by a parent context.
+    var event = new CustomEvent( "contextCreated", { detail: { parent: null }, bubbles: true, cancelable: true } );
+    dispatchEvent( event );
+    
+    if( event.detail.parent === "NOT READY" ) {
+      _parent.set( this, "NOT READY" );
+      // Whilst waiting for the parent context:
+      // Set an array to store and dependents.
+      _dependents.set( this, [] );
+      // Set an array to store any child contexts.
+      _childContexts.set( this, [] );
+    } else {
+      // Could be null if this is the root.
+      _parent.set( event.detail.parent );
+    }
+    
+    _super.createdCallback.call( this );
+    
+    var listener = childCreated.bind( this );
+    _childListeners.set( this, listener );
+    
+    // Loop through all the children and add a listener to catch when they
+    // are created.
+    var numChildren = this.children.length;
+    for (var i = 0; i < numChildren; i++) {
+      var child = this.children[ i ];
+      child.addEventListener( "created", listener );
+      
+    }
+    
+    
+  }
+  
+  
+  
+  //--------------------------------------------------------------------------
+  //
+  //  Event handlers
+  //
+  //--------------------------------------------------------------------------
+  
+  function childCreated( event ) {
+    var child = event.target;
+    var listener = _childListeners.get( this );
+    child.removeEventListener( "created", listener );
+    
+    var type = getQualifiedName( child );
+    var id = child.id;
+    var name = child.getAttribute( "name" );
+    
+    var hasId = id && id.length;
+    var hasName = name && name.length;
+    
+    var store = _store.get( this );
+    
+    // Add the child to the store by type.
+    addToStore( store, createKey( type, null, null ), child );
+    
+    if( hasId && hasName ) {
+      // Add the child to the store by type, id and name.
+      addToStore( store, createKey( type, id, name ), child );
+    }
+    
+    if( hasId ) {
+      // Add the child to the store by type and id.
+      addToStore( store, createKey( type, id, null ), child );
+      // Add the child to the store by id.
+      addToStore( store, createKey( null, id, null ), child );
+    }
+    
+    if( hasName ) {
+      // Add the child to the store by type and id.
+      addToStore( store, createKey( type, name, null ), child );
+      // Add the child to the store by name.
+      addToStore( store, createKey( null, name, null ), child );
+    }
+  }
+  
+  function contextCreated( event ) {
+    event.stopPropagation();
+    
+    if( _parent.get( this ) == "NOT_READY" ) {
+      event.detail.parent = "NOT_READY";
+      var contexts = _childContexts.get( this );
+      contexts.push( event.detail.setParentCallback );
+    } else {
+      event.detail.parent = this;
+    }
+  }
+  
+  function elementCreated( event ) {
+    event.stopPropagation();
+    
+    if( _parent.get( this ) == "NOT_READY" ) {
+      var dependents = _dependents.get( this );
+      dependents.push( event.target );
+    }
+    else
+    {
+      injectDependent.call( this, event.target );
+    }
+  }
+  
+  
+  
+  WX.registerElement( def, "wx.core.WxContext");
+  
+  
+})();
+  
+</script>
