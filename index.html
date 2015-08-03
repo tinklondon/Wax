@@ -9,11 +9,15 @@ license that can be found in the LICENSE file.
     <title>Polex</title>
       
 
-      <link rel="import" href="WxElement.html">
-      <link rel="import" href="TemplateElement.html">
-      <link rel="import" href="InvalidationElement.html">
-      <!--<link rel="import" href="WxContext.html">-->
-
+      <link rel="import" href="core/WxElement.html">
+      <link rel="import" href="core/TemplateElement.html">
+      <link rel="import" href="core/InvalidationElement.html">
+      <link rel="import" href="modules/WxModuleLoader.html">
+      <link rel="import" href="ioc/WxContext.html">
+      <link rel="import" href="ioc/WxCommandMap.html">
+      <link rel="import" href="ioc/WxConfig.html">
+      <link rel="import" href="ioc/WxObject.html">
+      <link rel="import" href="TestInjectExt.html">
 
       <script>
           
@@ -28,18 +32,26 @@ license that can be found in the LICENSE file.
           
       </script>
       
-      <script src="InvalidationManager.js"></script>
-      <script src="PriorityQueue.js"></script>
+      <script src="core/InvalidationManager.js"></script>
+      <script src="core/PriorityQueue.js"></script>
 
     <style></style>
   </head>
   <body onload="body_onloadHandler()">
 
+    
     <!--<invalidation-element></invalidation-element>-->
-    <!--<wx-context></wx-contextt>-->
+    <wx-context>
+      <wx-object id="test"></wx-object>
+      <wx-object id="hello"></wx-object>
+      <wx-command-map></wx-command-map>
+    </wx-context>
 
+    <test-inject-ext></test-inject-ext>
+    
     <!--<wx-element id="test"></wx-element>-->
-    <template-element></template-element>
+    <!--<template-element></template-element>-->
+    <!--<wx-module-loader></wx-module-loader>-->
     <!--<x-foo-shadowdom></x-foo-shadowdom>-->
   </body>
 </html>

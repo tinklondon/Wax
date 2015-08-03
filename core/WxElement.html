@@ -181,9 +181,14 @@
     }
   }
   
-  function getInject( target ) {
+  function getConfig( target ) {
     var d = _definitions.get( target.constructor );
-    return d ? d._injector : null;
+    
+//     d = Object.getPrototypeOf( target )
+// __ {}
+// d = Object.getPrototypeOf( d ).constructor
+    
+    return d ? d._config : null;
   }
   
   
@@ -195,8 +200,8 @@
     var p = Object.getPrototypeOf( this );
     while( p.constructor != wx.core.WxElement ) {
       // If this is a context, give it access to the inject info.
-      if( p.constructor == wx.core.WxContext ) {
-        protected.initContext.call( this, getInject, getNameSpace, getQualifiedName );
+      if( p.constructor == wx.ioc.WxContext ) {
+        protected.initContext.call( this, getConfig, getNameSpace, getQualifiedName );
         break;
       }
       p = Object.getPrototypeOf( p );
@@ -205,15 +210,8 @@
     this.dispatchEvent( new Event( "elementCreated", { bubbles: true, cancelable: false } ) );
   }
   
-  def._public.invalidateProperties = function() {
-    getProtected( this ).commitProperties.call( this );
-  }
   
   def._protected.initProtected = function( value ) {
-  
-  }
-  
-  def._protected.commitProperties = function() {
   
   }
   

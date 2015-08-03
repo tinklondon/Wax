@@ -1,0 +1,219 @@
+<link rel="import" href="../core/TemplateElement.html">
+
+<template>
+  <iframe id="iframe"></iframe>
+</template>
+
+<script>
+
+(function() {
+
+
+  //--------------------------------------------------------------------------
+  //
+  //  Variables
+  //
+  //--------------------------------------------------------------------------
+  
+  /**
+   * @private
+   */
+  var def = WX.extend( wx.core.TemplateElement, null );
+  
+  /**
+   * @private
+   */
+  var _super = def._super;
+  
+  /**
+   * @private
+   */
+  var _protected = new WeakMap();
+  
+  /**
+   * @private
+   */
+  var ownerDocument = document.currentScript.ownerDocument;
+  
+  /**
+   * @private
+   */
+  var _context = new WeakMap();
+  
+  /**
+   * @private
+   */
+  var _iframe = new WeakMap();
+  
+  /**
+   * @private
+   */
+  var _iframeOnload= new WeakMap();
+  
+  //--------------------------------------------------------------------------
+  //
+  //  Properties
+  //
+  //--------------------------------------------------------------------------
+  
+  //----------------------------------
+  //  url
+  //----------------------------------
+  
+  /**
+   * @private
+   */
+  var _url = new WeakMap();
+  
+  /**
+   * @private
+   */
+  var _urlInvalid = new WeakMap();
+  
+  Object.defineProperty( def._public, 'url', {
+    get: function() {
+      return _url.get( this );
+    },
+    set: function( value ) {
+      if( this._url == value )
+        return;
+        
+      _url.set( this, value );
+      _urlInvalid.set( this, true );
+      def._public.invalidateProperties.call( this );
+    }
+  });
+  
+  
+  //--------------------------------------------------------------------------
+  //
+  //  Methods
+  //
+  //--------------------------------------------------------------------------
+  
+  /**
+   * @private
+   */
+  function setParentCallback( p ) {
+    _context.set( this, p );
+    if( p && p != "NOT_READY" ) {
+      linkModules.call( this );
+    }
+  }
+  
+  /**
+   * @private
+   */
+  function load() {
+    if( _urlInvalid.get( this ) ) {
+      var iframe = _iframe.get( this );
+      if( iframe ) {
+        _urlInvalid.set( this, false );
+        iframe.src = this.url;
+      }
+    }
+  }
+  /**
+   * @private
+   */
+  function linkModules() {
+    var modules = _modules.get( this );
+    var context = _context.get( this );
+    if( context && modules ) {
+      var numItems = modules.length;
+      for( var i = 0; i < numItems; i++ ) {
+        modules[ i ].setParentCallback( context );
+      }
+    }
+  }
+  
+  /**
+   * @private
+   */
+  function getDocument( iframe ) {
+    return iframe.contentDocument 
+      ? iframe.contentDocument 
+      : iframe.contentWindow.document;
+  }
+  
+  
+  
+  //--------------------------------------------------------------------------
+  //
+  //  Overridden methods
+  //
+  //--------------------------------------------------------------------------
+  
+  def._protected.getParts = function() { 
+      return [
+        { id: "iframe", required: true }
+      ]
+  }
+  
+  def._protected.addPart = function( element, id ) {
+      console.log( "adding part", id );
+      _super.addPart( element, id );
+      switch( id ) {
+        case "iframe":
+          _iframe.set( this, element );
+          if( element )
+            element.onload = _iframeOnload.get( this );
+          break
+      }
+  }
+  
+  def._protected.removePart = function( element, name ) {
+      _super.removePart( element, id );
+  }
+  
+  def._config.required = [ "moduleloader" ];
+  
+  //--------------------------------------------------------------------------
+  //
+  //  Overridden lifecycle methods
+  //
+  //--------------------------------------------------------------------------
+  
+  def._public.createdCallback = function() {
+    _super.createdCallback.call( this );
+    
+    _iframeOnload.set( this, iframe_onload.bind( this ) );
+    
+    // Dispatch an event to hope it will be caught by a parent context.
+    var event = new CustomEvent( "contextCreated", { detail: { parent: null, setParentCallback: setParentCallback.bind( this ) }, bubbles: true, cancelable: true } );
+    dispatchEvent( event );
+    
+    setParentCallback.call( this, event.detail.parent );
+    
+    var t = ownerDocument.getElementsByTagName( "template" )[ 0 ];
+    this.template = t;
+  }
+  
+  
+  
+  
+  
+  //--------------------------------------------------------------------------
+  //
+  //  Callbacks
+  //
+  //--------------------------------------------------------------------------
+  
+  /**
+   * @private
+   */
+  function iframe_onload() {
+    var iframe = _frame.get( this );
+    var doc = getDocument( iframe );
+    var modules = doc.getElementsByTagName( "wx-module" );
+    _modules.set( this, modules );
+    linkModules.call( this );
+  }
+  
+  
+  
+  WX.registerElement( def, "wx.core.WxModuleLoader" );
+  
+})();
+  
+</script>

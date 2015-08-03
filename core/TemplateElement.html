@@ -1,4 +1,4 @@
-<link rel="import" href="InvalidationElement.html">
+<link rel="import" href="../core/InvalidationElement.html">
 
 <template>
   <button id="testid">Yeah</button>
@@ -50,6 +50,8 @@
       def._public.invalidateProperties.call( this );
     }
   });
+  
+  
  
   
   
@@ -77,6 +79,8 @@
     _protected.set( this, value );
     _super.initProtected.call( this, value );
   }
+  
+  
   
   function updateParts( shadowDom, updateMethod, adding ) {
     
@@ -134,11 +138,7 @@
     _super.createdCallback.call( this );
     
     var parts = _protected.get( this ).getParts.call( this );
-    _parts.set( this, parts )
-    
-    var t = ownerDocument.getElementsByTagName( "template" )[ 0 ];
-    this.template = t;
-    
+    _parts.set( this, parts )    
   }
   
   

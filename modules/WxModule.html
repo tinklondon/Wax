@@ -1,0 +1,155 @@
+<link rel="import" href="../core/TemplateElement.html">
+
+<template>
+  <content></content>
+</template>
+
+<script>
+
+(function() {
+
+
+  //--------------------------------------------------------------------------
+  //
+  //  Variables
+  //
+  //--------------------------------------------------------------------------
+  
+  /**
+   * @private
+   */
+  var def = WX.extend( wx.core.TemplateElement, null );
+  
+  /**
+   * @private
+   */
+  var _super = def._super;
+  
+  /**
+   * @private
+   */
+  var _protected = new WeakMap();
+  
+  /**
+   * @private
+   */
+  var ownerDocument = document.currentScript.ownerDocument;
+  
+  /**
+   * @private
+   */
+  var _parentContext = new WeakMap();
+  
+  /**
+   * @private
+   */
+  var _childContexts = new WeakMap();
+  
+  
+  
+  //--------------------------------------------------------------------------
+  //
+  //  Overridden methods
+  //
+  //--------------------------------------------------------------------------
+  
+  def._protected.getParts = function() { 
+      return []
+  }
+ 
+  
+  //--------------------------------------------------------------------------
+  //
+  //  Overridden lifecycle methods
+  //
+  //--------------------------------------------------------------------------
+  
+  def._public.createdCallback = function() {
+    _super.createdCallback.call( this );
+    
+    if( !this.template ) {
+      this.template = ownerDocument.getElementsByTagName( "template" )[ 0 ];
+    }
+    
+    // Set up a listener for leaf contexts being created.
+    this.parentNode.addEventListener( "contextCreated", parentNodeContextCreated.bind( this ) );
+    
+  }
+  
+  def._public.setParentContext = function( p ) {
+    _parentContext.set( this, p );
+    
+    var contexts = _childContexts.get( this );
+    _childContexts.delete( this );
+    
+    var numItems = contexts ? contexts.length : 0;
+    for( var i = 0; i < numItems; i++ ) {
+      // Invoke the callback stored.
+      contexts[ i ]( p );
+    }
+  }
+
+  
+  /**
+   * @private
+   */
+  parentNodeContextCreated = function( event ) {
+    parentContext = _parentContext.get( this );
+    
+    if( !parentContext ) {}
+      event.detail.parent = "NOT_READY";
+      
+      var contexts = _childContexts.get( this );
+      if( !contexts ) {
+        contexts = []
+        _childContexts.set( this, contexts );
+      }
+      
+      contexts.push( event.details.setParentCallback );
+  
+    } else {
+      event.detail.parent = parentContext;
+    }
+    
+    event.stopPropagation();
+  }
+  
+  
+  
+  //--------------------------------------------------------------------------
+  //
+  //  Callbacks
+  //
+  //--------------------------------------------------------------------------
+  
+  function iframe_onload() {
+    var iframe = _frame.get( this );
+    var doc = getDocument( iframe );
+    var modules = doc.getElementsByTagName( "wx-module" );
+    _modules.set( this, modules );
+    linkModules.call( this );
+  }
+  
+  function linkModules() {
+    var modules = _modules.get( this );
+    var context = _context.get( this );
+    if( context && modules ) {
+      var numItems = modules.length;
+      for( var i = 0; i < numItems; i++ ) {
+        modules[ i ].setParentCallback( context );
+      }
+    }
+  }
+  
+  function getDocument( iframe ) {
+    return iframe.contentDocument 
+      ? iframe.contentDocument 
+      : iframe.contentWindow.document;
+  }
+  
+  
+  WX.registerElement( def, "wx.core.WxModule" );
+  
+})();
+  
+</script>
