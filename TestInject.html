@@ -1,0 +1,47 @@
+<link rel="import" href="core/WxElement.html">
+
+<script>
+
+(function() {
+
+  
+  //--------------------------------------------------------------------------
+  //
+  //  Variables
+  //
+  //--------------------------------------------------------------------------
+  
+  /**
+   * @private
+   */
+  var def = WX.extend( wx.core.WxElement, null );
+  
+  /**
+   * @private
+   */
+  var _super = def._super;
+  
+  /**
+   * @private
+   */
+  var _protected = new WeakMap();
+  
+  
+  //--------------------------------------------------------------------------
+  //
+  //  Configuration
+  //
+  //--------------------------------------------------------------------------
+  
+  def._config.required = [ { id: "testId" } ];
+  
+  def._config.inject = function( items ) {
+    console.log( this, "TestInject.inject()", items );
+  }  
+  
+  WX.registerElement( def, "TestInject" );
+  
+  
+})();
+  
+</script>

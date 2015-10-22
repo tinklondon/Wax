@@ -193,14 +193,13 @@
   
   
   def._public.createdCallback = function() {
-    console.log( "createdCallback WxElement Blah" );
     var protected = getProtected( this );
     protected.initProtected.call( this, protected );
     
     var p = Object.getPrototypeOf( this );
     while( p.constructor != wx.core.WxElement ) {
       // If this is a context, give it access to the inject info.
-      if( p.constructor == wx.ioc.WxContext ) {
+      if( wx.ioc && p.constructor == wx.ioc.WxContext ) {
         protected.initContext.call( this, getConfig, getNameSpace, getQualifiedName );
         break;
       }
@@ -219,7 +218,7 @@
   // XFooProto.createdCallback = function() {
   //   console.log( "createdCallback WxElement" );
   // }
-  WX.registerElement( def, "wx.core.WxElement")
+  WX.registerElement( def, "wx.core.WxElement" )
   
 })();
   

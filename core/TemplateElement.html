@@ -1,8 +1,5 @@
 <link rel="import" href="../core/InvalidationElement.html">
 
-<template>
-  <button id="testid">Yeah</button>
-</template>
 <script>
 
 (function() {
@@ -23,6 +20,7 @@
   
   var _shadowDom = new WeakMap();
   
+  var _partInstances = new WeakMap();
   
   var ownerDocument = document.currentScript.ownerDocument;
 
@@ -67,12 +65,15 @@
       ]
   }
   
-  def._protected.addPart = function( element, id ) {
-      console.log( "adding part", id )
+  def._protected.addPart = function( element, part ) {
   }
   
-  def._protected.removePart = function( element, name ) {
-      
+  def._protected.removePart = function( element, part ) {
+  }
+  
+  def._protected.getPartInstance = function( part ) {
+    var instances = _partInstances.get( this );
+    return instances.get( part );
   }
   
   def._protected.initProtected = function( value ) {
@@ -87,13 +88,19 @@
     var parts = _parts.get( this );
     
     if( parts ) {
+      var instances = _partInstances.get( this );
       var numParts = parts.length;
       for ( var i = 0; i < numParts; i++ ) {
         var p = parts[ i ];
         var elId = p.id;
         var el = shadowDom.getElementById( elId );
         if( el ) {
-          updateMethod( el, elId );
+          updateMethod.call( this, el, p );
+          if( adding ) {
+            instances.set( p, el );
+          } else {
+            instances.delete( p );
+          }
         } else if( adding && p.required ) {
           throw "The required template part '" + elId + "' cannot be found.";
         }
@@ -120,8 +127,6 @@
     sd.appendChild( clone );
     
     updateParts.call( this, sd, _protected.get( this ).addPart, true );
-    
-    console.log( "installTemplate");
   }
   
   
@@ -134,11 +139,10 @@
   //--------------------------------------------------------------------------
   
   def._public.createdCallback = function() {
-    console.log( "createdCallback Template" );
     _super.createdCallback.call( this );
-    
     var parts = _protected.get( this ).getParts.call( this );
-    _parts.set( this, parts )    
+    _parts.set( this, parts );
+    _partInstances.set( this, new WeakMap() );   
   }
   
   

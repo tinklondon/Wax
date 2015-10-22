@@ -18,7 +18,6 @@
   var _parent = new WeakMap();
   
   var _injectStore = new WeakMap();
-  var _commandStore = new WeakMap();
   
   var _childListeners = new WeakMap();
   
@@ -31,11 +30,6 @@
    * @private
    */
   var _commandStore = new WeakMap();
-  
-  /**
-   * @private
-   */
-  var _iocStore = new WeakMap()
   
   
   //--------------------------------------------------------------------------
@@ -60,15 +54,15 @@
     
     // If there is no item, request it from the parent context.
     if( !o && p )
-      o = p.get( this ).getItemByKey.call( this, key );
+      o = p.getObjectByKey( key );
       
-    // // If there haven't been any items registered with the key.
-    // if( !o ) {
-    //   throw "Invalid dependency, there are no items that match."
-    // // If there have been multiple items registered with the key.
-    // } else if( o == "invalid" ) {
-    //   throw "Invalid dependency, there are multiple items that match."
-    // }
+    // If there haven't been any items registered with the key.
+    if( !o ) {
+      throw "Invalid dependency, there are no items that match."
+    // If there have been multiple items registered with the key.
+    } else if( o == "invalid" ) {
+      throw "Invalid dependency, there are multiple items that match."
+    }
     
     return o;
   }
@@ -100,7 +94,7 @@
           toInject.push( item );
         }
         
-        config.inject.call( this, toInject );
+        config.inject.call( dependent, toInject );
       }
       
       p = Object.getPrototypeOf ( p );
@@ -157,7 +151,7 @@
     if( items ) {
       numItems = items.length;
       for( i = 0; i < numItems; i++ ) {
-        injectDependent( items[ i ] );
+        injectDependent.call( this, items[ i ] );
       }
     }
    
@@ -220,21 +214,21 @@
    
     _super.createdCallback.call( this );
    
+    // Dispatch an event to hope it will be caught by a parent context.
+    var event = new CustomEvent( "contextCreated", { detail: { parent: null, setParentCallback: setParentCallback.bind( this ) }, bubbles: true, cancelable: true } );
+    this.dispatchEvent( event );
+    
     // Add a 'elementCreated' listener to the parent to catch element being created.
     document.addEventListener( "elementCreated", elementCreated.bind( this ) );
     
     // Add a listener for child contexts being created.
     this.parentNode.addEventListener( "contextCreated", contextCreated.bind( this ) );
     
-    // Dispatch an event to hope it will be caught by a parent context.
-    var event = new CustomEvent( "contextCreated", { detail: { parent: null }, bubbles: true, cancelable: true } );
-    dispatchEvent( event );
-    
     _injectStore.set( this, new Map() );
     _commandStore.set( this, new Map() );
     
-    if( event.detail.parent === "NOT READY" ) {
-      _parent.set( this, "NOT READY" );
+    if( event.detail.parent === "NOT_READY" ) {
+      _parent.set( this, "NOT_READY" );
       // Whilst waiting for the parent context:
       // Set an array to store and dependents.
       _dependents.set( this, [] );
@@ -242,15 +236,13 @@
       _childContexts.set( this, [] );
       // Could be null if this is the root.
     } else if( event.detail.parent ) {
-      _parent.set( event.detail.parent );
+      _parent.set( this, event.detail.parent );
     }
     
     var listener = child_elementCreated.bind( this );
     _childListeners.set( this, listener );
     
     this.addEventListener( "elementCreated", listener )
-    
-    
   }
   
   
@@ -272,8 +264,6 @@
     } else {
       addForInjection.call( this, child, type );
     }
-    console.log( "***************", type );
-    
   }
   
   

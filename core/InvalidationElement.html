@@ -91,7 +91,6 @@
   //--------------------------------------------------------------------------
   
   def._public.createdCallback = function() {
-    console.log( "createdCallback Invalidation" );
     _super.createdCallback.call( this );
     this.invalidateProperties();
     
@@ -138,15 +137,12 @@
   
   
   def._protected.commitProperties = function() {
-    console.log( "commitProperties" );
   }
   
   def._protected.commitSize = function() {
-    console.log( "commitSize" );
   }
   
   def._protected.commitView = function() {
-    console.log( "commitView" );
   }
   
   def._public.validateProperties = function() {

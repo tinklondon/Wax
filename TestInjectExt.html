@@ -1,0 +1,46 @@
+<link rel="import" href="TestInject.html">
+
+<script>
+
+(function() {
+
+  
+  //--------------------------------------------------------------------------
+  //
+  //  Variables
+  //
+  //--------------------------------------------------------------------------
+  
+  /**
+   * @private
+   */
+  var def = WX.extend( TestInject, null );
+  
+  /**
+   * @private
+   */
+  var _super = def._super;
+  
+  /**
+   * @private
+   */
+  var _protected = new WeakMap();
+  
+  
+  //--------------------------------------------------------------------------
+  //
+  //  Configuration
+  //
+  //--------------------------------------------------------------------------
+  
+  def._config.required = [ { name: "testName" } ];
+  
+  def._config.inject = function( items ) {
+    console.log( this, "TestInjectExt.inject()", items );
+  }
+  
+  WX.registerElement( def, "TestInjectExt" );
+  
+})();
+  
+</script>

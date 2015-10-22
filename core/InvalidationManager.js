@@ -985,7 +985,6 @@ var InvalidationManager = function () {
         }
         return InvalidationManager.instance;
     }
-    console.log("ind" );
     wx = window.wx || {};
     wx.core = wx.core || {};
     wx.core.InvalidationManager = InvalidationManager;
